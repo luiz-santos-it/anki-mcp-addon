@@ -1,0 +1,10 @@
+{
+    "package": "anki-mcp",
+    "name": "anki-mcp: MCP Server for LLM Clients",
+    "homepage": "https://github.com/luiz-santos-it/anki-mcp-addon",
+    "tags": ["mcp", "claude", "llm", "ai"],
+    "conflicts": [],
+    "min_point_version": 231000,
+    "max_point_version": null,
+    "human_readable_id": "anki-mcp"
+}
