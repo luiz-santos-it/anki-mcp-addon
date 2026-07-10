@@ -4,7 +4,7 @@ Python Anki add-on that exposes your Anki collection as MCP tools for Claude and
 
 ## Prerequisites
 
-- Anki 23.x or later (Python 3.9+ bundled)
+- Anki 23.10 or later (Python 3.9+ bundled)
 - An MCP-compatible client (Claude Code, Claude Desktop, Cursor, Zed, etc.)
 
 ## Installation
@@ -17,7 +17,7 @@ The MCP server starts automatically when you open a profile. It listens on `http
 
 ### Optional: change port
 
-Tools → Add-ons → anki-mcp → Config → set `port` to any free port.
+Tools → Add-ons → anki-mcp → Config opens a settings dialog. Change the port and click "Save and restart" — no need to restart Anki.
 
 ## Client setup
 
@@ -74,8 +74,7 @@ Refer to each client's MCP documentation for where to configure SSE servers.
 ## Development
 
 ```bash
-cd C:\dev\anki_mcp_addon
-pip install pytest pytest-mock
+pip install pytest
 pytest
 ```
 
