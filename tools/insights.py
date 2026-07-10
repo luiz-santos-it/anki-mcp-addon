@@ -1,6 +1,8 @@
 import time
 from aqt import mw
 
+from .search import quote_deck
+
 
 def get_insights(deck: str = None) -> dict:
     cutoff_ms = int((time.time() - 30 * 86400) * 1000)
@@ -36,7 +38,7 @@ def get_insights(deck: str = None) -> dict:
     )
 
     if deck:
-        note_ids = list(mw.col.find_notes(f'deck:"{deck}"'))
+        note_ids = list(mw.col.find_notes(f"deck:{quote_deck(deck)}"))
     else:
         note_ids = list(mw.col.find_notes(""))
     total_notes = len(note_ids)

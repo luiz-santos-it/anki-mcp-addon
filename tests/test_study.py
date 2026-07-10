@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from tools.study import (
     get_due_cards, submit_answer, reschedule_cards, suspend_cards, forget_cards,
-    _queued_states,
+    reset_queue, _queued_states,
 )
 
 
@@ -52,6 +52,14 @@ class TestGetDueCards:
 
         col.find_cards.assert_called_once_with('deck:"Neuro::Cardio" is:due')
 
+    def test_escapes_embedded_quote_in_deck_name(self, col):
+        col.v3_scheduler.return_value = False
+        col.find_cards.return_value = []
+
+        get_due_cards('Weird "Deck"')
+
+        col.find_cards.assert_called_once_with('deck:"Weird \\"Deck\\"" is:due')
+
     def test_raises_on_invalid_limit(self, col):
         with pytest.raises(ValueError):
             get_due_cards("D", limit=0)
@@ -75,6 +83,28 @@ class TestGetDueCards:
 
         assert 42 in _queued_states
         assert _queued_states[42] is qc
+
+    def test_v3_scheduler_merges_instead_of_clearing_stale_queue(self, col):
+        """A prior get_due_cards call (e.g. a different deck) may have left
+        unanswered cards cached; a later call must not drop them."""
+        col.v3_scheduler.return_value = True
+        col.find_cards.return_value = [42]
+        card = _make_card(42)
+        col.get_card.return_value = card
+        col.decks.name.return_value = "D"
+
+        qc_new = MagicMock()
+        qc_new.card.id = 42
+        col.sched.get_queued_cards.return_value = MagicMock(cards=[qc_new])
+
+        _queued_states.clear()
+        stale_qc = MagicMock()
+        _queued_states[999] = stale_qc
+
+        get_due_cards("D")
+
+        assert _queued_states[999] is stale_qc
+        assert _queued_states[42] is qc_new
 
 
 class TestSubmitAnswer:
@@ -149,3 +179,10 @@ class TestForgetCards:
     def test_calls_schedule_cards_as_new(self, col):
         forget_cards([7, 8])
         col.sched.schedule_cards_as_new.assert_called_once_with([7, 8])
+
+
+class TestResetQueue:
+    def test_clears_cached_queue_states(self):
+        _queued_states[1] = MagicMock()
+        reset_queue()
+        assert _queued_states == {}

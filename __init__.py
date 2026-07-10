@@ -1,11 +1,12 @@
 try:
     from aqt import gui_hooks, mw
+    from aqt.utils import showWarning
     _IN_ANKI = True
 except ImportError:
     _IN_ANKI = False
 
 if _IN_ANKI:
-    from . import protocol, server
+    from . import config_ui, protocol, server
     from .tools import decks as _decks
     from .tools import insights as _insights
     from .tools import notes as _notes
@@ -255,14 +256,33 @@ def _register_tools():
     )
 
 
+def _restart_server(port: int) -> bool:
+    server.stop()
+    return server.start(port)
+
+
+def _warn_port_in_use(port: int) -> None:
+    showWarning(
+        f"anki-mcp: port {port} is already in use, so the MCP server did not "
+        f"start. Change the port in Tools → Add-ons → anki-mcp → Config."
+    )
+
+
 def _on_profile_did_open():
     if mw.col is None:
         return
+    _study.reset_queue()
     _register_tools()
     cfg = mw.addonManager.getConfig(__name__) or {}
     port = cfg.get("port", 8766)
-    server.start(port)
+    if not server.start(port):
+        _warn_port_in_use(port)
+
+
+def _open_config_dialog() -> None:
+    config_ui.open_config_dialog(mw, __name__, _restart_server)
 
 
 if _IN_ANKI:
     gui_hooks.profile_did_open.append(_on_profile_did_open)
+    mw.addonManager.setConfigAction(__name__, _open_config_dialog)

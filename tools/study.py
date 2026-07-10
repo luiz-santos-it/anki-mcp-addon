@@ -1,6 +1,8 @@
 import time
 from aqt import mw
 
+from .search import quote_deck
+
 # Cache queued card states from get_due_cards for use in submit_answer (v3 scheduler).
 # Maps card_id -> QueuedCard protobuf object.
 _queued_states: dict = {}
@@ -10,7 +12,7 @@ def get_due_cards(deck: str, limit: int = 20) -> list:
     if limit < 1 or limit > 100:
         raise ValueError("limit must be between 1 and 100")
 
-    query = f'deck:"{deck}" is:due' if deck else "is:due"
+    query = f"deck:{quote_deck(deck)} is:due" if deck else "is:due"
     card_ids = list(mw.col.find_cards(query))[:limit]
 
     if not card_ids:
@@ -19,7 +21,7 @@ def get_due_cards(deck: str, limit: int = 20) -> list:
     use_v3 = _is_v3()
     if use_v3:
         queued = mw.col.sched.get_queued_cards(fetch_limit=max(limit, 100))
-        _queued_states.clear()
+        # Merge, don't clear: an earlier call for another deck may have cards still pending answer.
         for qc in queued.cards:
             _queued_states[qc.card.id] = qc
 
@@ -99,3 +101,10 @@ def _is_v3() -> bool:
     return bool(
         hasattr(mw.col, "v3_scheduler") and mw.col.v3_scheduler()
     )
+
+
+def reset_queue() -> None:
+    """Drop cached queue state. Call when the underlying collection changes
+    (e.g. profile switch) so stale QueuedCards from a different collection
+    can't be fed into submit_answer."""
+    _queued_states.clear()

@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 from tools.decks import create_deck, list_decks, delete_decks
 
@@ -17,11 +18,12 @@ class TestListDecks:
         col.decks.all.return_value = [{"id": 1, "name": "Default"}]
         col.sched.today = 100
 
-        # new_counts query
+        # new_counts, due_counts, learn (queue=1 intraday), learn (queue=3 day)
         col.db.all.side_effect = [
             [[1, 3]],   # new (queue=0)
             [[1, 2]],   # due (queue=2 due<=today)
-            [[1, 1]],   # learn (queue IN 1,3)
+            [[1, 1]],   # learn queue=1 (due<=now)
+            [],         # learn queue=3 (due<=today)
         ]
 
         result = list_decks()
@@ -36,13 +38,38 @@ class TestListDecks:
         col.decks.all.return_value = [{"id": 99, "name": "NewDeck"}]
         col.sched.today = 100
         # No rows match deck id 99
-        col.db.all.side_effect = [[], [], []]
+        col.db.all.side_effect = [[], [], [], []]
 
         result = list_decks()
 
         assert result[0]["newCount"] == 0
         assert result[0]["dueCount"] == 0
         assert result[0]["learnCount"] == 0
+
+    def test_learn_count_sums_intraday_and_day_learning_queues(self, col):
+        col.decks.all.return_value = [{"id": 1, "name": "Default"}]
+        col.sched.today = 100
+        col.db.all.side_effect = [
+            [],         # new
+            [],         # due
+            [[1, 2]],   # queue=1 (intraday learning)
+            [[1, 3]],   # queue=3 (day learning)
+        ]
+
+        result = list_decks()
+
+        assert result[0]["learnCount"] == 5
+
+    def test_learn_count_intraday_query_uses_current_time(self, col):
+        col.decks.all.return_value = []
+        col.sched.today = 100
+        col.db.all.side_effect = [[], [], [], []]
+
+        with patch("tools.decks.time.time", return_value=12345.0):
+            list_decks()
+
+        queue1_call = col.db.all.call_args_list[2]
+        assert queue1_call.args[1] == 12345
 
 
 class TestDeleteDecks:

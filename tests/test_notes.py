@@ -116,6 +116,24 @@ class TestCreateNotes:
         assert result["created"] == [10]
         assert len(result["errors"]) == 1
 
+    def test_field_assignment_error_is_recorded_without_losing_earlier_successes(self, col):
+        good_note = MagicMock()
+        good_note.id = 1
+        bad_note = MagicMock()
+        bad_note.__setitem__.side_effect = KeyError("no such field")
+        col.new_note.side_effect = [good_note, bad_note]
+        col.models.by_name.return_value = {"name": "Basic"}
+        col.decks.id.return_value = 1
+
+        result = create_notes([
+            {"noteType": "Basic", "deck": "D", "front": "F1", "back": "B1"},
+            {"noteType": "Basic", "deck": "D", "front": "F2", "back": "B2"},
+        ])
+
+        assert result["created"] == [1]
+        assert len(result["errors"]) == 1
+        assert "Note 2" in result["errors"][0]
+
 
 class TestUpdateNote:
     def test_updates_fields(self, col):
@@ -174,3 +192,7 @@ class TestRemoveTags:
     def test_calls_bulk_remove_with_space_joined_tags(self, col):
         remove_tags([5], ["old-tag", "another"])
         col.tags.bulk_remove.assert_called_once_with([5], "old-tag another")
+
+    def test_raises_when_tag_contains_space(self, col):
+        with pytest.raises(ValueError, match="must not contain spaces"):
+            remove_tags([5], ["tag with space"])

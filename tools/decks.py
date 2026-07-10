@@ -1,3 +1,5 @@
+import time
+
 from aqt import mw
 
 
@@ -23,11 +25,20 @@ def list_decks() -> list:
     ):
         due_counts[row[0]] = row[1]
 
+    now_ts = int(time.time())
     learn_counts = {}
+    # queue=1 (intraday learning): due is a unix timestamp.
     for row in mw.col.db.all(
-        "SELECT did, count() FROM cards WHERE queue IN (1,3) GROUP BY did"
+        "SELECT did, count() FROM cards WHERE queue=1 AND due<=? GROUP BY did",
+        now_ts,
     ):
-        learn_counts[row[0]] = row[1]
+        learn_counts[row[0]] = learn_counts.get(row[0], 0) + row[1]
+    # queue=3 (day learning): due is a day number, like queue=2.
+    for row in mw.col.db.all(
+        "SELECT did, count() FROM cards WHERE queue=3 AND due<=? GROUP BY did",
+        today,
+    ):
+        learn_counts[row[0]] = learn_counts.get(row[0], 0) + row[1]
 
     result = []
     for deck in decks:

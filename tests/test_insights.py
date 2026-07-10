@@ -70,6 +70,11 @@ class TestGetInsightsDeckScoped:
         assert result["youngCards"] == 0
         assert result["averageInterval"] == 0
 
+    def test_escapes_embedded_quote_in_deck_name(self, col):
+        self._setup(col)
+        get_insights('Weird "Deck"')
+        col.find_notes.assert_called_once_with('deck:"Weird \\"Deck\\""')
+
 
 class TestGetInsightsNoScope:
     def test_collection_wide_uses_no_deck_filter(self, col):

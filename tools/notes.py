@@ -43,11 +43,10 @@ def create_notes(notes_input: list) -> dict:
 
         deck_id = mw.col.decks.id(deck, create=True)
         note = mw.col.new_note(model)
-        for fname, val in fields.items():
-            note[fname] = val
-        note.tags = n.get("tags", [])
-
         try:
+            for fname, val in fields.items():
+                note[fname] = val
+            note.tags = n.get("tags", [])
             mw.col.add_note(note, deck_id)
             created.append(note.id)
         except Exception as e:
@@ -88,4 +87,7 @@ def add_tags(note_ids: list, tags: list) -> None:
 
 
 def remove_tags(note_ids: list, tags: list) -> None:
+    for t in tags:
+        if " " in t:
+            raise ValueError(f"Tag '{t}' must not contain spaces")
     mw.col.tags.bulk_remove(note_ids, " ".join(tags))

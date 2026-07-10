@@ -9,8 +9,8 @@ Python Anki add-on that exposes your Anki collection as MCP tools for Claude and
 
 ## Installation
 
-1. Find your Anki add-ons directory: Anki → Tools → Add-ons → Open Add-ons Folder
-2. Copy (or symlink) this entire folder into that directory
+1. Find your Anki add-ons directory: Anki → Tools → Add-ons → View Files (opens `%APPDATA%\Anki2\addons21\` on Windows)
+2. Copy (or symlink) this repo's root folder — the one containing `__init__.py` and `manifest.json` — into that add-ons directory
 3. Restart Anki
 
 The MCP server starts automatically when you open a profile. It listens on `http://127.0.0.1:8766`.
