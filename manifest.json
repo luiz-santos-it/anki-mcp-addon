@@ -1,5 +1,5 @@
 {
-    "package": "anki-mcp",
+    "package": "593632040",
     "name": "anki-mcp: MCP Server for LLM Clients",
     "homepage": "https://github.com/luiz-santos-it/anki-mcp-addon",
     "tags": ["mcp", "claude", "llm", "ai"],
