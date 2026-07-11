@@ -28,10 +28,16 @@ def config_ui_mod():
     sys.modules["aqt.qt"] = MagicMock()
 
     _load("server")
+    _load("client_setup")
     mod = _load("config_ui")
     yield mod
 
-    for name in (f"{_PKG_NAME}.server", f"{_PKG_NAME}.config_ui", _PKG_NAME):
+    for name in (
+        f"{_PKG_NAME}.server",
+        f"{_PKG_NAME}.client_setup",
+        f"{_PKG_NAME}.config_ui",
+        _PKG_NAME,
+    ):
         sys.modules.pop(name, None)
     if original_qt is not None:
         sys.modules["aqt.qt"] = original_qt
@@ -94,3 +100,76 @@ class TestOpenConfigDialog:
         label = mod.QLabel.return_value
         texts = [c.args[0] for c in label.setText.call_args_list]
         assert any("NOT running" in t for t in texts)
+
+
+class TestClientSetupTab:
+    def test_copy_claude_code_command_uses_spinbox_port(self, config_ui_mod):
+        mod = config_ui_mod
+        mod.server.is_running = lambda: True
+        mod.QSpinBox.return_value.value.return_value = 9999
+
+        mod.open_config_dialog(_make_mw(8766), "anki_mcp", MagicMock())
+        _connected_callback(mod, 2)()  # "Copy command" (Claude Code)
+
+        mod.QApplication.clipboard.return_value.setText.assert_called_with(
+            "claude mcp add anki --transport sse http://127.0.0.1:9999/sse"
+        )
+
+    def test_copy_manual_config_uses_spinbox_port(self, config_ui_mod):
+        mod = config_ui_mod
+        mod.server.is_running = lambda: True
+        mod.QSpinBox.return_value.value.return_value = 9999
+
+        mod.open_config_dialog(_make_mw(8766), "anki_mcp", MagicMock())
+        _connected_callback(mod, 4)()  # "Copy config" (manual Claude Desktop)
+
+        copied = mod.QApplication.clipboard.return_value.setText.call_args.args[0]
+        assert "mcp-remote" in copied
+        assert "http://127.0.0.1:9999/sse" in copied
+
+    def test_copy_sse_url_uses_spinbox_port(self, config_ui_mod):
+        mod = config_ui_mod
+        mod.server.is_running = lambda: True
+        mod.QSpinBox.return_value.value.return_value = 9999
+
+        mod.open_config_dialog(_make_mw(8766), "anki_mcp", MagicMock())
+        _connected_callback(mod, 5)()  # "Copy URL" (other MCP clients)
+
+        mod.QApplication.clipboard.return_value.setText.assert_called_with(
+            "http://127.0.0.1:9999/sse"
+        )
+
+    def test_export_button_saves_bundled_mcpb_to_chosen_path(self, config_ui_mod, tmp_path):
+        mod = config_ui_mod
+        mod.server.is_running = lambda: True
+        dest = str(tmp_path / "anki-mcp.mcpb")
+        mod.QFileDialog.getSaveFileName.return_value = (dest, "")
+        mod.client_setup.export_mcpb = MagicMock()
+
+        mod.open_config_dialog(_make_mw(8766), "anki_mcp", MagicMock())
+        _connected_callback(mod, 3)()  # "Export Extension..."
+
+        mod.client_setup.export_mcpb.assert_called_once_with(dest)
+
+    def test_export_button_does_nothing_when_dialog_cancelled(self, config_ui_mod):
+        mod = config_ui_mod
+        mod.server.is_running = lambda: True
+        mod.QFileDialog.getSaveFileName.return_value = ("", "")
+        mod.client_setup.export_mcpb = MagicMock()
+
+        mod.open_config_dialog(_make_mw(8766), "anki_mcp", MagicMock())
+        _connected_callback(mod, 3)()
+
+        mod.client_setup.export_mcpb.assert_not_called()
+
+    def test_export_button_shows_warning_on_failure(self, config_ui_mod, tmp_path):
+        mod = config_ui_mod
+        mod.server.is_running = lambda: True
+        dest = str(tmp_path / "anki-mcp.mcpb")
+        mod.QFileDialog.getSaveFileName.return_value = (dest, "")
+        mod.client_setup.export_mcpb = MagicMock(side_effect=OSError("disk full"))
+
+        mod.open_config_dialog(_make_mw(8766), "anki_mcp", MagicMock())
+        _connected_callback(mod, 3)()
+
+        assert mod.QMessageBox.warning.called

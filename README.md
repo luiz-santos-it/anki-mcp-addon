@@ -45,6 +45,8 @@ Tools → Add-ons → anki-mcp → Config opens a settings dialog. Change the po
 
 ## Client setup
 
+Tools → Add-ons → anki-mcp → Config → **Client Setup** tab has one-click copy for the Claude Code command and the manual Claude Desktop config, plus an **Export Extension...** button for the Claude Desktop `.mcpb`, all using whatever port you've actually got configured. The steps below are the same actions done by hand, for reference or scripting.
+
 ### Claude Code
 
 ```bash
@@ -55,17 +57,39 @@ Restart Claude Code. Anki must be open whenever you use it.
 
 ### Claude Desktop
 
-Add to `claude_desktop_config.json`:
+Claude Desktop installs local MCP servers as [Desktop Extensions](https://github.com/modelcontextprotocol/mcpb) (`.mcpb` files) rather than through manual JSON config. Easiest path: Tools → Add-ons → anki-mcp → Config → Client Setup tab → **Export Extension...**, save `anki-mcp.mcpb` anywhere.
+
+Then in Claude Desktop: Settings → Extensions → Install Extension..., pick that file. It prompts for the Anki MCP server URL (defaults to `http://127.0.0.1:8766/sse`, only change it if you changed the add-on's port). Anki must be open.
+
+<details>
+<summary>Rebuilding the .mcpb from source (maintainers only)</summary>
+
+The exported file is a pre-built copy of `desktop-extension.mcpb`, checked into this repo. If you change `desktop-extension/manifest.json` or `desktop-extension/server/index.js`, rebuild and commit it:
+
+```bash
+cd desktop-extension
+npx -y @anthropic-ai/mcpb pack . ../desktop-extension.mcpb
+```
+</details>
+
+<details>
+<summary>Manual config (older Claude Desktop versions without Extensions support)</summary>
+
+Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json`). A bare `url` isn't supported in older versions, so bridge through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
 
 ```json
 {
   "mcpServers": {
     "anki": {
-      "url": "http://127.0.0.1:8766/sse"
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:8766/sse"]
     }
   }
 }
 ```
+
+If Claude Desktop can't find `npx` on its own, use the absolute path (e.g. `C:\\nvm4w\\nodejs\\npx.cmd` on Windows) instead of `"npx"`.
+</details>
 
 ### Other MCP-compatible clients
 
@@ -119,6 +143,14 @@ pytest
 ```
 
 Tests run without Anki. The `aqt` and `anki` modules are mocked via `tests/conftest.py`.
+
+### Building the AnkiWeb package
+
+```bash
+python scripts/build_ankiaddon.py
+```
+
+Produces `anki-mcp.ankiaddon` (flat zip, no wrapping folder) for upload to the [AnkiWeb listing](https://ankiweb.net/shared/info/593632040). Must be re-run and re-uploaded whenever a runtime file changes, including `desktop-extension.mcpb`.
 
 ## License
 

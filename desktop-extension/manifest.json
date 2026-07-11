@@ -1,0 +1,48 @@
+{
+  "manifest_version": "0.3",
+  "name": "anki-mcp-bridge",
+  "display_name": "Anki MCP",
+  "version": "1.0.0",
+  "description": "Connect Claude Desktop to the anki-mcp-addon server running inside Anki.",
+  "long_description": "Bridges Claude Desktop to the anki-mcp-addon MCP server, which runs inside Anki itself (install separately via AnkiWeb code 593632040, or from https://github.com/luiz-santos-it/anki-mcp-addon). Anki must be open with the add-on installed for this extension to work.",
+  "author": {
+    "name": "Luiz Santos",
+    "url": "https://github.com/luiz-santos-it"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luiz-santos-it/anki-mcp-addon.git"
+  },
+  "homepage": "https://github.com/luiz-santos-it/anki-mcp-addon",
+  "support": "https://github.com/luiz-santos-it/anki-mcp-addon/issues",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "ANKI_MCP_URL": "${user_config.server_url}"
+      }
+    }
+  },
+  "user_config": {
+    "server_url": {
+      "type": "string",
+      "title": "Anki MCP Server URL",
+      "description": "The SSE URL the anki-mcp-addon server listens on inside Anki. Change this if you changed the port in the add-on's settings dialog.",
+      "default": "http://127.0.0.1:8766/sse",
+      "required": false
+    }
+  },
+  "keywords": ["anki", "flashcards", "study", "spaced-repetition"],
+  "license": "MIT",
+  "privacy_policies": [],
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": {
+      "node": ">=16.0.0"
+    }
+  }
+}

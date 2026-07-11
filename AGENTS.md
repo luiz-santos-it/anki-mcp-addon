@@ -14,7 +14,10 @@ pytest tests/test_notes.py  # single file
 
 ```
 __init__.py    ← Anki entry point: registers tools, starts server, wires config UI/hooks
-config_ui.py   ← Qt settings dialog (port + status + restart button), via addonManager.setConfigAction
+config_ui.py   ← Qt settings dialog: Server tab (port/status/restart) + Client Setup tab
+                 (one-click Claude Code/Desktop connection helpers + .mcpb export)
+client_setup.py ← pure port→command/JSON/URL string builders + .mcpb copy; no Qt/Anki
+                 imports, tested directly without mocking aqt.qt
 protocol.py    ← JSON-RPC 2.0 + MCP dispatch; tool registry (_tools dict)
 server.py      ← ThreadingHTTPServer; GET /sse (SSE stream), POST /messages
 tools/
@@ -26,6 +29,12 @@ tools/
   search.py    ← shared deck-name quoting for Anki search syntax
 tests/
   conftest.py  ← fakes aqt/anki via sys.modules before any imports
+desktop-extension/    ← Claude Desktop .mcpb SOURCE (manifest.json + server/index.js, spawns
+                         `npx mcp-remote` pointed at the SSE server); packed via `mcpb pack`
+desktop-extension.mcpb ← pre-built, tracked binary — the actual file client_setup.py's
+                         export_mcpb() copies; rebuild+commit whenever the source above changes
+scripts/build_ankiaddon.py ← builds the AnkiWeb .ankiaddon zip; must include client_setup.py
+                              and desktop-extension.mcpb alongside the other runtime files
 ```
 
 ## Key conventions
@@ -41,14 +50,20 @@ tests/
 
 ## Testing
 
-Tests mock the `aqt` and `anki` modules via `sys.modules` injection in `conftest.py`. Tool functions are called directly; no HTTP server needed. Protocol tests clear `_tools` registry between tests via `clean_registry` fixture. `server.py`/`config_ui.py` tests load fresh copies of the module via `importlib` (they use relative imports) to avoid needing the real add-on package.
+Tests mock the `aqt` and `anki` modules via `sys.modules` injection in `conftest.py`. Tool functions are called directly; no HTTP server needed. Protocol tests clear `_tools` registry between tests via `clean_registry` fixture. `server.py`/`config_ui.py` tests load fresh copies of the module via `importlib` (they use relative imports) to avoid needing the real add-on package. `client_setup.py` has zero Qt/Anki imports, so `tests/test_client_setup.py` imports it directly — no mocking needed.
+
+## Packaging
+
+`desktop-extension.mcpb` is a pre-built binary checked into git (see the `.gitignore` exception for it) — rebuild via `npx -y @anthropic-ai/mcpb pack desktop-extension desktop-extension.mcpb` and commit the result whenever `desktop-extension/manifest.json` or `desktop-extension/server/index.js` change. `scripts/build_ankiaddon.py` builds the AnkiWeb submission zip; its file list must be kept in sync with any new runtime file (it's an explicit list, not a glob).
 
 ## Client setup (after installing add-on)
+
+The add-on's own Config dialog (Tools → Add-ons → anki-mcp → Config → Client Setup tab) generates all of this for the user already, using their actual configured port. Manually:
+
+Claude Code:
 
 ```bash
 claude mcp add anki --transport sse http://127.0.0.1:8766/sse
 ```
 
-```json
-{ "mcpServers": { "anki": { "url": "http://127.0.0.1:8766/sse" } } }
-```
+Claude Desktop: install `desktop-extension.mcpb` (Settings → Extensions), not manual JSON — see README for the older manual-config fallback and why a bare `"url"` doesn't work in every Desktop version.
