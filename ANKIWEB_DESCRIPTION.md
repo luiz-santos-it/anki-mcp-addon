@@ -12,6 +12,6 @@ Everything runs locally. Your collection never leaves your machine except throug
 
 **Setup**
 
-Once enabled, the MCP server starts automatically on http://127.0.0.1:8766/sse whenever you open an Anki profile. No extra configuration needed, just add it to your MCP client, for example: claude mcp add anki --transport sse http://127.0.0.1:8766/sse
+Once enabled, the MCP server starts automatically whenever you open an Anki profile. Tools → Add-ons → anki-mcp → Config opens a settings dialog with a Client Setup tab: one-click copy for the Claude Code command, one-click export of the Claude Desktop extension, and the raw connection URL for any other MCP client.
 
 Full docs, tool list, and source: https://github.com/luiz-santos-it/anki-mcp-addon
