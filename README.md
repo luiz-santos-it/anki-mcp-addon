@@ -64,10 +64,12 @@ Then in Claude Desktop: Settings → Extensions → Install Extension..., pick t
 <details>
 <summary>Rebuilding the .mcpb from source (maintainers only)</summary>
 
-The exported file is a pre-built copy of `desktop-extension.mcpb`, checked into this repo. If you change `desktop-extension/manifest.json` or `desktop-extension/server/index.js`, rebuild and commit it:
+The exported file is a pre-built copy of `desktop-extension.mcpb`, checked into this repo. `mcp-remote` is bundled as a real dependency (not resolved via `npx` at runtime, which isn't reliably on PATH inside Claude Desktop's Node environment), so a rebuild needs `npm install` first. If you change `desktop-extension/manifest.json`, `desktop-extension/server/index.js`, or `desktop-extension/server/package.json`, rebuild and commit it:
 
 ```bash
-cd desktop-extension
+cd desktop-extension/server
+npm install
+cd ..
 npx -y @anthropic-ai/mcpb pack . ../desktop-extension.mcpb
 ```
 </details>

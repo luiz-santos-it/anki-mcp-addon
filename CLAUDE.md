@@ -30,7 +30,7 @@ tools/
 tests/
   conftest.py  ← fakes aqt/anki via sys.modules before any imports
 desktop-extension/    ← Claude Desktop .mcpb SOURCE (manifest.json + server/index.js, spawns
-                         `npx mcp-remote` pointed at the SSE server); packed via `mcpb pack`
+                         a bundled mcp-remote via process.execPath, not npx); packed via `mcpb pack`
 desktop-extension.mcpb ← pre-built, tracked binary — the actual file client_setup.py's
                          export_mcpb() copies; rebuild+commit whenever the source above changes
 scripts/build_ankiaddon.py ← builds the AnkiWeb .ankiaddon zip; must include client_setup.py
@@ -42,6 +42,7 @@ scripts/build_ankiaddon.py ← builds the AnkiWeb .ankiaddon zip; must include c
 - **Thread safety**: tool functions call `mw.col` directly; `server.py` routes all tool execution to the Qt main thread via `mw.taskman.run_on_main()` + `concurrent.futures.Future`.
 - **No auth, Origin check instead**: `server.py` rejects any request carrying an `Origin` header — only browsers send one, no legitimate MCP client does. This is the CSRF defense (there's no other auth), don't add CORS headers back.
 - **Server lifecycle**: `server.stop()` must call both `shutdown()` and `server_close()`, or the port stays bound and a same-port restart fails.
+- **Benign connection errors**: `_MCPServer.handle_error()` and the `except _BENIGN_CONNECTION_ERRORS` in `_handle_sse` both swallow `BrokenPipeError`/`ConnectionResetError`/`ConnectionAbortedError` — a client disconnecting mid-transport-negotiation is routine (confirmed with real Claude Desktop/mcp-remote traffic), not a bug worth a traceback in Anki's console.
 - **Scheduler compat**: `study.py` checks `mw.col.v3_scheduler()` and branches between v3 `answer_card(CardAnswer(...))` and legacy `answerCard(card, ease)`.
 - **v3 state cache**: `_queued_states` in `study.py` maps `card_id → QueuedCard`. Populated by `get_due_cards` (merged, not cleared, so concurrent decks don't clobber each other), consumed by `submit_answer`, and dropped via `reset_queue()` on profile open so stale state from a previous collection can't leak in.
 - **Deck-name escaping**: build search queries with `tools/search.py:quote_deck()`, never raw f-string interpolation — deck names can contain `"`.
@@ -54,7 +55,7 @@ Tests mock the `aqt` and `anki` modules via `sys.modules` injection in `conftest
 
 ## Packaging
 
-`desktop-extension.mcpb` is a pre-built binary checked into git (see the `.gitignore` exception for it) — rebuild via `npx -y @anthropic-ai/mcpb pack desktop-extension desktop-extension.mcpb` and commit the result whenever `desktop-extension/manifest.json` or `desktop-extension/server/index.js` change. `scripts/build_ankiaddon.py` builds the AnkiWeb submission zip; its file list must be kept in sync with any new runtime file (it's an explicit list, not a glob).
+`desktop-extension.mcpb` is a pre-built binary checked into git (see the `.gitignore` exception for it). `mcp-remote` is bundled as a real dependency under `desktop-extension/server/node_modules/` (gitignored, reinstall with `npm install` from `desktop-extension/server/`) rather than resolved via `npx` at runtime — Claude Desktop's Node environment doesn't reliably have `npx` on PATH. Rebuild via `npm install` (in `desktop-extension/server/`) then `npx -y @anthropic-ai/mcpb pack desktop-extension desktop-extension.mcpb`, and commit the result, whenever `desktop-extension/manifest.json`, `desktop-extension/server/index.js`, or `desktop-extension/server/package.json` change. `scripts/build_ankiaddon.py` builds the AnkiWeb submission zip; its file list must be kept in sync with any new runtime file (it's an explicit list, not a glob).
 
 ## Client setup (after installing add-on)
 
