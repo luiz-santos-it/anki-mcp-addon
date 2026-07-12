@@ -1,4 +1,4 @@
-Point Claude (or any MCP client) at your Anki collection and study, edit, and analyze your deck in plain conversation. Runs an MCP server inside Anki itself. No AnkiConnect, no Node.js, no external dependencies.
+Study with Claude, or any MCP client, instead of clicking through Anki's UI. This add-on runs an MCP server inside Anki itself, no AnkiConnect, no Node.js, no PyPI downloads at runtime. Install it, and your MCP client can create cards, quiz you, and analyze your retention in plain conversation.
 
 **Examples of what you can ask:**
 
