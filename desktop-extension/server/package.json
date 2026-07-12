@@ -1,0 +1,11 @@
+{
+  "name": "anki-mcp-bridge-server",
+  "version": "1.0.0",
+  "description": "Bridges Claude Desktop to the anki-mcp-addon SSE server via a bundled mcp-remote.",
+  "main": "index.js",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "mcp-remote": "^0.1.38"
+  }
+}

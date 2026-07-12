@@ -219,3 +219,113 @@ class TestHandlePostBodyLimits:
         handler._handle_post()
 
         assert errors == [413]
+
+
+class TestHandleSseClientDisconnect:
+    def _make_sse_handler(self, srv):
+        handler = _make_handler(srv, path="/sse")
+        handler.send_response = lambda *a, **k: None
+        handler.send_header = lambda *a, **k: None
+        handler.end_headers = lambda *a, **k: None
+        return handler
+
+    def _install_immediately_empty_queue(self, srv, monkeypatch):
+        class _ImmediateEmptyQueue:
+            def get(self, timeout=None):
+                raise srv.queue.Empty
+
+        monkeypatch.setattr(srv.queue, "Queue", _ImmediateEmptyQueue)
+
+    def test_connection_aborted_error_during_ping_is_swallowed(self, server_mod, monkeypatch):
+        srv, _ = server_mod
+        self._install_immediately_empty_queue(srv, monkeypatch)
+        handler = self._make_sse_handler(srv)
+
+        writes = []
+
+        class _FakeWfile:
+            def write(self, data):
+                writes.append(data)
+                if len(writes) > 1:  # first write is the "endpoint" event, second is the ping
+                    raise ConnectionAbortedError("simulated WinError 10053")
+
+            def flush(self):
+                pass
+
+        handler.wfile = _FakeWfile()
+
+        handler._handle_sse()  # must not raise
+
+        assert len(writes) == 2
+
+    def test_broken_pipe_and_connection_reset_still_swallowed(self, server_mod, monkeypatch):
+        srv, _ = server_mod
+        self._install_immediately_empty_queue(srv, monkeypatch)
+
+        for exc_type in (BrokenPipeError, ConnectionResetError):
+            handler = self._make_sse_handler(srv)
+            writes = []
+
+            class _FakeWfile:
+                def write(self, data, _exc=exc_type):
+                    writes.append(data)
+                    if len(writes) > 1:
+                        raise _exc("simulated")
+
+                def flush(self):
+                    pass
+
+            handler.wfile = _FakeWfile()
+
+            handler._handle_sse()  # must not raise
+
+    def test_session_is_cleaned_up_after_client_disconnect(self, server_mod, monkeypatch):
+        srv, _ = server_mod
+        self._install_immediately_empty_queue(srv, monkeypatch)
+        handler = self._make_sse_handler(srv)
+
+        class _FakeWfile:
+            def write(self, data):
+                raise ConnectionAbortedError("simulated")
+
+            def flush(self):
+                pass
+
+        handler.wfile = _FakeWfile()
+
+        handler._handle_sse()
+
+        assert srv._sessions == {}
+
+
+class TestMCPServerHandleError:
+    def _trigger_handle_error(self, srv, exc_type):
+        server = srv._MCPServer.__new__(srv._MCPServer)
+        try:
+            raise exc_type("simulated")
+        except exc_type:
+            server.handle_error(request=None, client_address=("127.0.0.1", 1))
+        return server
+
+    def test_swallows_benign_connection_errors_silently(self, server_mod, monkeypatch):
+        srv, _ = server_mod
+        called = []
+        monkeypatch.setattr(
+            srv.http.server.HTTPServer, "handle_error", lambda self, *a: called.append(True)
+        )
+
+        for exc_type in (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            self._trigger_handle_error(srv, exc_type)
+
+        assert called == []
+
+    def test_delegates_unexpected_errors_to_default_handling(self, server_mod, monkeypatch):
+        srv, _ = server_mod
+        called = []
+        monkeypatch.setattr(
+            srv.http.server.HTTPServer, "handle_error", lambda self, *a: called.append(True)
+        )
+
+        self._trigger_handle_error(srv, ValueError)
+
+        assert called == [True]

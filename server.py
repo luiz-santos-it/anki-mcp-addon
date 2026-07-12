@@ -2,13 +2,27 @@ import concurrent.futures
 import http.server
 import json
 import queue
+import sys
 import threading
 import uuid
 from urllib.parse import parse_qs, urlparse
 
+_BENIGN_CONNECTION_ERRORS = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
+
 # session_id -> queue.Queue[str | None]
 _sessions: dict = {}
 _sessions_lock = threading.Lock()
+
+
+class _MCPServer(http.server.ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        # A client disconnecting mid-request (common during transport
+        # negotiation) is normal, not a bug — don't spam Anki's console.
+        exc_type = sys.exc_info()[0]
+        if exc_type is not None and issubclass(exc_type, _BENIGN_CONNECTION_ERRORS):
+            return
+        super().handle_error(request, client_address)
+
 
 _server: http.server.ThreadingHTTPServer | None = None
 _server_thread: threading.Thread | None = None
@@ -60,9 +74,8 @@ class _MCPHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
 
-        self._sse_event("endpoint", f"/messages?sessionId={session_id}")
-
         try:
+            self._sse_event("endpoint", f"/messages?sessionId={session_id}")
             while True:
                 try:
                     data = q.get(timeout=25)
@@ -72,7 +85,7 @@ class _MCPHandler(http.server.BaseHTTPRequestHandler):
                 except queue.Empty:
                     self.wfile.write(b": ping\n\n")
                     self.wfile.flush()
-        except (BrokenPipeError, ConnectionResetError):
+        except _BENIGN_CONNECTION_ERRORS:
             pass
         finally:
             with _sessions_lock:
@@ -148,7 +161,7 @@ def start(port: int = 8766) -> bool:
     if _server is not None:
         return True
     try:
-        _server = http.server.ThreadingHTTPServer(("127.0.0.1", port), _MCPHandler)
+        _server = _MCPServer(("127.0.0.1", port), _MCPHandler)
     except OSError:
         _server = None
         return False

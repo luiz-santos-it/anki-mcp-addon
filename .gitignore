@@ -8,3 +8,4 @@ build/
 *.mcpb
 !/desktop-extension.mcpb
 .playwright-mcp/
+desktop-extension/server/node_modules/
