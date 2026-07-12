@@ -17,11 +17,13 @@ from aqt.qt import (
 
 from . import client_setup, server
 
+_DEFAULT_PORT = 8766
+
 
 def open_config_dialog(mw, module: str, restart_server) -> None:
     """restart_server(port) -> bool; returns whether the server ended up running."""
     cfg = mw.addonManager.getConfig(module) or {}
-    current_port = cfg.get("port", 8766)
+    current_port = cfg.get("port", _DEFAULT_PORT)
 
     dialog = QDialog(mw)
     dialog.setWindowTitle("anki-mcp Settings")
@@ -45,8 +47,17 @@ def open_config_dialog(mw, module: str, restart_server) -> None:
         mw.addonManager.writeConfig(module, {"port": port})
         ok = restart_server(port)
         _refresh_status(ok, port)
+        if ok:
+            QMessageBox.information(
+                dialog, "MCP server restarted", f"The Anki MCP server is now running on port {port}."
+            )
+        else:
+            QMessageBox.warning(
+                dialog, "MCP server restart failed",
+                f"Could not start the MCP server on port {port} — it may already be in use.",
+            )
 
-    save_btn = QPushButton("Save and restart")
+    save_btn = QPushButton("Save and restart MCP server")
     save_btn.clicked.connect(_on_save)
 
     close_btn = QPushButton("Close")
@@ -56,6 +67,7 @@ def open_config_dialog(mw, module: str, restart_server) -> None:
     server_layout.addWidget(QLabel("MCP server port:"))
     server_layout.addWidget(port_spin)
     server_layout.addWidget(status_label)
+    server_layout.addStretch()
 
     btn_row = QHBoxLayout()
     btn_row.addWidget(save_btn)
@@ -67,6 +79,10 @@ def open_config_dialog(mw, module: str, restart_server) -> None:
 
     client_setup_tab, refresh_client_setup = _build_client_setup_tab(dialog, port_spin)
     port_spin.valueChanged.connect(refresh_client_setup)
+
+    restore_btn = QPushButton("Restore default")
+    restore_btn.clicked.connect(lambda: port_spin.setValue(_DEFAULT_PORT))
+    btn_row.addWidget(restore_btn)
 
     tabs = QTabWidget()
     tabs.addTab(server_tab, "Server")

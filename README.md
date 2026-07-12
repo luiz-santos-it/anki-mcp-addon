@@ -41,7 +41,7 @@ Either way, the MCP server starts automatically when you open a profile. It list
 
 ### Optional: change port
 
-Tools → Add-ons → anki-mcp → Config opens a settings dialog. Change the port and click "Save and restart"; no need to restart Anki.
+Tools → Add-ons → anki-mcp → Config opens a settings dialog. Change the port and click "Save and restart MCP server" (restarts the add-on's server, not Anki); no need to restart Anki. "Restore default" resets the field back to 8766.
 
 ## Client setup
 

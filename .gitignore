@@ -7,3 +7,4 @@ build/
 *.ankiaddon
 *.mcpb
 !/desktop-extension.mcpb
+.playwright-mcp/
