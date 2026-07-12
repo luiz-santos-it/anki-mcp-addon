@@ -8,7 +8,10 @@ const path = require("node:path");
 const url = process.env.ANKI_MCP_URL || "http://127.0.0.1:8766/sse";
 const mcpRemoteEntry = require.resolve("mcp-remote/dist/proxy.js");
 
-const child = spawn(process.execPath, [mcpRemoteEntry, url], {
+// sse-only skips mcp-remote's default http-first probe (a doomed Streamable
+// HTTP POST against our SSE-only server) that otherwise blows past Claude
+// Desktop's initialize timeout before falling back to SSE.
+const child = spawn(process.execPath, [mcpRemoteEntry, url, "--transport", "sse-only"], {
   stdio: "inherit",
   cwd: path.dirname(mcpRemoteEntry),
 });
