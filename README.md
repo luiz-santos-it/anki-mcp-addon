@@ -91,6 +91,8 @@ Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_c
 ```
 
 If Claude Desktop can't find `npx` on its own, use the absolute path (e.g. `C:\\nvm4w\\nodejs\\npx.cmd` on Windows) instead of `"npx"`.
+
+Note for Microsoft Store installs of Claude Desktop: the app reads its config from the MSIX-virtualized copy at `%LOCALAPPDATA%\Packages\Claude_<id>\LocalCache\Roaming\Claude\claude_desktop_config.json` — edits to `%APPDATA%\Claude\claude_desktop_config.json` are silently ignored. The Extension install path above avoids this entirely.
 </details>
 
 ### Other MCP-compatible clients

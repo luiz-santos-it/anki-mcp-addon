@@ -1,23 +1,14 @@
 #!/usr/bin/env node
-// Thin bridge: Claude Desktop spawns this over stdio, we forward to the
-// anki-mcp-addon SSE server (running inside Anki) via a bundled mcp-remote
-// (no npx/PATH dependency — Claude Desktop's Node environment may not have it).
-const { spawn } = require("node:child_process");
-const path = require("node:path");
+// Runs the bundled mcp-remote in-process. Claude Desktop's "built-in Node"
+// is the Electron binary, where process.execPath is claude.exe — spawning it
+// launches a second app instance that dies on the single-instance lock, so a
+// child process is not an option here.
+const { pathToFileURL } = require("node:url");
 
 const url = process.env.ANKI_MCP_URL || "http://127.0.0.1:8766/sse";
-const mcpRemoteEntry = require.resolve("mcp-remote/dist/proxy.js");
+const entry = require.resolve("mcp-remote/dist/proxy.js");
 
-// sse-only skips mcp-remote's default http-first probe (a doomed Streamable
-// HTTP POST against our SSE-only server) that otherwise blows past Claude
-// Desktop's initialize timeout before falling back to SSE.
-const child = spawn(process.execPath, [mcpRemoteEntry, url, "--transport", "sse-only"], {
-  stdio: "inherit",
-  cwd: path.dirname(mcpRemoteEntry),
-});
-
-child.on("exit", (code) => process.exit(code ?? 0));
-child.on("error", (err) => {
-  console.error("Failed to start mcp-remote:", err);
-  process.exit(1);
-});
+// sse-only skips mcp-remote's http-first probe (always 404s against our
+// SSE-only server) that otherwise blows past Claude Desktop's init timeout.
+process.argv = [process.argv[0], entry, url, "--transport", "sse-only"];
+import(pathToFileURL(entry).href);

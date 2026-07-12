@@ -29,8 +29,8 @@ tools/
   search.py    ← shared deck-name quoting for Anki search syntax
 tests/
   conftest.py  ← fakes aqt/anki via sys.modules before any imports
-desktop-extension/    ← Claude Desktop .mcpb SOURCE (manifest.json + server/index.js, spawns
-                         a bundled mcp-remote via process.execPath, not npx); packed via `mcpb pack`
+desktop-extension/    ← Claude Desktop .mcpb SOURCE (manifest.json + server/index.js, runs a
+                         bundled mcp-remote IN-PROCESS via dynamic import); packed via `mcpb pack`
 desktop-extension.mcpb ← pre-built, tracked binary — the actual file client_setup.py's
                          export_mcpb() copies; rebuild+commit whenever the source above changes
 scripts/build_ankiaddon.py ← builds the AnkiWeb .ankiaddon zip; must include client_setup.py
@@ -55,7 +55,7 @@ Tests mock the `aqt` and `anki` modules via `sys.modules` injection in `conftest
 
 ## Packaging
 
-`desktop-extension.mcpb` is a pre-built binary checked into git (see the `.gitignore` exception for it). `mcp-remote` is bundled as a real dependency under `desktop-extension/server/node_modules/` (gitignored, reinstall with `npm install` from `desktop-extension/server/`) rather than resolved via `npx` at runtime — Claude Desktop's Node environment doesn't reliably have `npx` on PATH. Rebuild via `npm install` (in `desktop-extension/server/`) then `npx -y @anthropic-ai/mcpb pack desktop-extension desktop-extension.mcpb`, and commit the result, whenever `desktop-extension/manifest.json`, `desktop-extension/server/index.js`, or `desktop-extension/server/package.json` change. `scripts/build_ankiaddon.py` builds the AnkiWeb submission zip; its file list must be kept in sync with any new runtime file (it's an explicit list, not a glob).
+`desktop-extension.mcpb` is a pre-built binary checked into git (see the `.gitignore` exception for it). `mcp-remote` is bundled as a real dependency under `desktop-extension/server/node_modules/` (gitignored, reinstall with `npm install` from `desktop-extension/server/`) and run **in-process** via `process.argv` rewrite + dynamic `import()` — never spawn a child with `process.execPath`: under Claude Desktop's built-in Node that path is the Electron binary (claude.exe), and spawning it launches a second app instance that dies on the single-instance lock with zero stderr. The bridge also forces `--transport sse-only`, since mcp-remote's default http-first probe always 404s against this SSE-only server and the wasted round-trip can blow Claude Desktop's initialize timeout. Rebuild via `npm install` (in `desktop-extension/server/`) then `npx -y @anthropic-ai/mcpb pack desktop-extension desktop-extension.mcpb`, and commit the result, whenever `desktop-extension/manifest.json`, `desktop-extension/server/index.js`, or `desktop-extension/server/package.json` change. `scripts/build_ankiaddon.py` builds the AnkiWeb submission zip; its file list must be kept in sync with any new runtime file (it's an explicit list, not a glob).
 
 ## Client setup (after installing add-on)
 
