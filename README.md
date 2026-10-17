@@ -113,6 +113,7 @@ Refer to each client's MCP documentation for where to configure SSE servers.
 | `add_tags` / `remove_tags` | Tag notes by ID. Supports `::` hierarchy. |
 | `delete_notes` | Delete notes by ID (also deletes associated cards). |
 | `move_notes` | Move notes to another deck. |
+| `add_audio` | Attach audio (base64) to a note field as `[sound:...]`. Caller generates the audio (e.g. via `edge-tts`, free/no-key) — this tool only stores it. |
 
 **Decks**
 
