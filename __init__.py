@@ -15,22 +15,12 @@ if _IN_ANKI:
     from .tools import sync as _sync
 
 
-_FIELD_FORMAT_NOTE = (
-    "Fields are HTML, rendered as-is in Anki's Chromium-based webview (not sanitized "
-    "by this add-on — raw HTML in, raw HTML out). Supported inline: `<b>`/`<i>`/`<span "
-    "style=...>` etc, `<img src=\"file.ext\">` for images already in collection.media "
-    "(jpg/png/gif/svg/webp all render), inline `<svg>...</svg>`, `[sound:file.mp3]` for "
-    "audio/video (mp3/mp4 most portable; see add_audio), and MathJax for math — inline "
-    "`\\(x^2\\)`, block `\\[x^2\\]` (no LaTeX install needed; legacy `[latex]...[/latex]` "
-    "tags need Anki's optional LaTeX renderer and are not recommended)."
-)
-
 def _register_tools():
     p = protocol
 
     p.register_tool(
         "create_notes",
-        "Create Basic or Cloze notes. Supports batch creation. " + _FIELD_FORMAT_NOTE,
+        "Create Basic or Cloze notes. Supports batch creation.",
         {
             "type": "object",
             "properties": {
@@ -75,8 +65,7 @@ def _register_tools():
 
     p.register_tool(
         "update_note",
-        "Edit note fields in place by note ID. Preserves all card scheduling data. "
-        + _FIELD_FORMAT_NOTE,
+        "Edit note fields in place by note ID. Preserves all card scheduling data.",
         {
             "type": "object",
             "properties": {
