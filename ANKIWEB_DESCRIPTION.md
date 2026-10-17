@@ -7,7 +7,6 @@ Study with Claude, or any MCP client, instead of clicking through Anki's UI. Thi
 - "How's my retention been this month? Which decks am I falling behind on?"
 - "Find every card tagged hard, move them into a Review deck."
 - "I got that one wrong, mark it Again."
-- "Add pronunciation audio to all my Spanish vocab cards."
 
 Everything runs locally. Your collection never leaves your machine except through whatever MCP client you're already using.
 
