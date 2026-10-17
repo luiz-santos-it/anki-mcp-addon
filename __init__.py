@@ -9,7 +9,6 @@ if _IN_ANKI:
     from . import config_ui, protocol, server
     from .tools import decks as _decks
     from .tools import insights as _insights
-    from .tools import media as _media
     from .tools import notes as _notes
     from .tools import study as _study
     from .tools import sync as _sync
@@ -135,27 +134,6 @@ def _register_tools():
             "required": ["noteIds", "deck"],
         },
         lambda a: _notes.move_notes(a["noteIds"], a["deck"]),
-    )
-
-    p.register_tool(
-        "add_audio",
-        "Attach audio to a note field. This tool only stores bytes you already have — "
-        "it does NOT generate speech itself. To get audio for a piece of text, generate "
-        "it yourself first (e.g. run `edge-tts --voice en-US-EmmaMultilingualNeural "
-        "--text \"<text>\" --write-media out.mp3`, no API key needed, then base64-encode "
-        "the file), then call this tool with the base64 string. Appends `[sound:...]` to "
-        "the given field so Anki plays it on review.",
-        {
-            "type": "object",
-            "properties": {
-                "noteId": {"type": "integer"},
-                "field": {"type": "string", "description": "Field name to append the sound tag to, e.g. 'Front'."},
-                "audioBase64": {"type": "string", "description": "Base64-encoded audio file bytes (mp3/ogg/wav)."},
-                "filename": {"type": "string", "description": "Desired filename, e.g. 'word.mp3'. Anki dedupes/renames on collision."},
-            },
-            "required": ["noteId", "field", "audioBase64", "filename"],
-        },
-        lambda a: _media.add_audio(a["noteId"], a["field"], a["audioBase64"], a["filename"]),
     )
 
     p.register_tool(

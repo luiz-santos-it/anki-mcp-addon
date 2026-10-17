@@ -16,7 +16,6 @@ FILES = [
     "tools/__init__.py",
     "tools/decks.py",
     "tools/insights.py",
-    "tools/media.py",
     "tools/notes.py",
     "tools/search.py",
     "tools/study.py",
